@@ -1,0 +1,17 @@
+services:
+  # TruthGuard Backend API
+  - type: web
+    name: truthguard-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PROJECT_NAME
+        value: "Fake News & Deepfake Detection Hub"

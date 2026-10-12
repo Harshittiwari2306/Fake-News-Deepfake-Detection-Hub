@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, JSON
 from app.database.session import Base
+import app.models.user  # Ensures 'users' table is registered for ForeignKey
 
 class Analysis(Base):
     __tablename__ = "analyses"

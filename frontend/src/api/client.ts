@@ -1,9 +1,25 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+const getBaseUrl = (): string => {
+  let url = (import.meta.env.VITE_API_URL || '').trim();
+  if (!url) {
+    return 'http://127.0.0.1:8000/api/v1';
+  }
+  // Remove trailing slashes and spaces
+  url = url.replace(/\/+$/, '');
+  
+  // If user passed root url (e.g. https://xxx.onrender.com), append /api/v1 automatically
+  if (!url.endsWith('/api/v1')) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 60000, // 60s timeout to allow Render free tier instances to spin up
   headers: {
     'Content-Type': 'application/json',
   },

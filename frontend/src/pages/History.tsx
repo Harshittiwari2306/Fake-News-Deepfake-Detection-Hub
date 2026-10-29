@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Clock, Filter, Search, FileText, Image, Video, 
-  Mic, CheckCircle, ChevronRight
+  Mic, CheckCircle, ChevronRight, Trash2, Loader2
 } from 'lucide-react';
 import { api, type AnalysisResult } from '../api/client';
 
@@ -11,6 +11,7 @@ export default function History() {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<AnalysisResult | null>(null);
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -25,6 +26,27 @@ export default function History() {
       console.error("Failed to load history:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: number | string) => {
+    e.stopPropagation(); // Avoid opening the details modal
+    if (!window.confirm("Are you sure you want to permanently delete this analysis record?")) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await api.deleteHistoryItem(id);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      if (selectedItem?.id === id) {
+        setSelectedItem(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete record:", err);
+      alert("Failed to delete record. Please check your backend connection.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -127,7 +149,7 @@ export default function History() {
               <div
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
-                className="p-4 hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-4 cursor-pointer"
+                className="p-4 hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-4 cursor-pointer group"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 shrink-0">
@@ -144,7 +166,7 @@ export default function History() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right hidden sm:block">
                     <div className="text-xs font-bold text-white">{item.confidence}% Conf.</div>
                     <div className="text-[10px] text-slate-500">
@@ -152,7 +174,22 @@ export default function History() {
                     </div>
                   </div>
                   {getRiskBadge(item.risk_level)}
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => item.id && handleDelete(e, item.id)}
+                    disabled={deletingId === item.id}
+                    title="Delete this analysis record"
+                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === item.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors" />
                 </div>
               </div>
             ))}
@@ -171,12 +208,26 @@ export default function History() {
                   {selectedItem.analysis_type} Analysis Detail (#{selectedItem.id})
                 </span>
               </div>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-slate-400 hover:text-white text-sm cursor-pointer"
-              >
-                ✕ Close
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={(e) => selectedItem.id && handleDelete(e, selectedItem.id)}
+                  disabled={deletingId === selectedItem.id}
+                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2.5 py-1 rounded-lg border border-red-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {deletingId === selectedItem.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>Delete</span>
+                </button>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="text-slate-400 hover:text-white text-sm cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">

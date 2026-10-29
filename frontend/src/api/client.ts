@@ -34,6 +34,21 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+export interface UserResponse {
+  id: number;
+  email: string;
+  full_name?: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: UserResponse;
+}
+
 export interface AnalysisResult {
   id?: number;
   analysis_type: string;
@@ -74,6 +89,32 @@ export interface DashboardStats {
 }
 
 export const api = {
+  // Authentication
+  login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>('/auth/login', credentials);
+    if (res.data.access_token) {
+      localStorage.setItem('truthguard_token', res.data.access_token);
+      localStorage.setItem('truthguard_user_data', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  register: async (data: { email: string; password: string; full_name?: string }): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>('/auth/register', data);
+    if (res.data.access_token) {
+      localStorage.setItem('truthguard_token', res.data.access_token);
+      localStorage.setItem('truthguard_user_data', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem('truthguard_token');
+    localStorage.removeItem('truthguard_user_data');
+    localStorage.removeItem('truthguard_user');
+    localStorage.setItem('truthguard_auth', 'false');
+  },
+
   // Text analysis
   analyzeText: async (params: { text: string; headline?: string; source_url?: string }): Promise<AnalysisResult> => {
     const res = await apiClient.post<AnalysisResult>('/analyze/text', params);
@@ -125,6 +166,43 @@ export const api = {
   // Analysis history
   getHistory: async (limit: number = 50): Promise<AnalysisResult[]> => {
     const res = await apiClient.get<AnalysisResult[]>(`/dashboard/history?limit=${limit}`);
+    return res.data;
+  },
+
+  // Delete history item / submission (MongoDB & SQL)
+  deleteHistoryItem: async (id: number | string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await apiClient.delete(`/submissions/${id}`);
+      return res.data;
+    } catch {
+      const res = await apiClient.delete(`/dashboard/history/${id}`);
+      return res.data;
+    }
+  },
+
+  deleteSubmission: async (id: string | number): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await apiClient.delete(`/submissions/${id}`);
+      return res.data;
+    } catch {
+      const res = await apiClient.delete(`/dashboard/history/${id}`);
+      return res.data;
+    }
+  },
+
+  // MongoDB Submissions & Analytics
+  getSubmissions: async (params?: { skip?: number; limit?: number; content_type?: string }) => {
+    const res = await apiClient.get('/submissions', { params });
+    return res.data;
+  },
+
+  getSubmissionById: async (id: string) => {
+    const res = await apiClient.get(`/submissions/${id}`);
+    return res.data;
+  },
+
+  getDashboardAnalytics: async () => {
+    const res = await apiClient.get('/dashboard/analytics');
     return res.data;
   },
 };

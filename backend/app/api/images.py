@@ -4,6 +4,7 @@ from app.database.session import get_db
 from app.schemas.analysis import AnalysisResult
 from app.services.image_service import analyze_image_deepfake
 from app.services.auth_service import get_current_user_optional
+from app.services.mongo_service import sync_analysis_to_mongo
 from app.models.user import User
 
 router = APIRouter(prefix="/analyze", tags=["Image Deepfake Analysis"])
@@ -30,4 +31,17 @@ async def analyze_image_endpoint(
         raise HTTPException(status_code=400, detail="Image file exceeds maximum 25MB limit.")
         
     user_id = user.id if user else None
-    return analyze_image_deepfake(db=db, image_bytes=contents, filename=filename, user_id=user_id)
+    result = analyze_image_deepfake(db=db, image_bytes=contents, filename=filename, user_id=user_id)
+
+    # Persist to MongoDB
+    await sync_analysis_to_mongo(
+        user_id=str(user_id or "guest_user"),
+        content_type="image",
+        prediction_label=result.prediction,
+        confidence_score=result.confidence,
+        model_name=result.model_name,
+        explanation=result.explanation,
+        file_reference=filename
+    )
+
+    return result

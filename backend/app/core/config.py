@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     
     # Database - Default to SQLite file if Postgres is not configured locally
     DATABASE_URL: str = "sqlite:///./truthguard.db"
+
+    # MongoDB Configuration
+    MONGODB_URI: str = "mongodb://localhost:27017"
+    MONGODB_DATABASE: str = "fake_news_deepfake_hub"
     
     # LLM / Groq API
     GROQ_API_KEY: str = ""
@@ -44,3 +48,8 @@ settings = Settings()
 # Fallback check directly from os.environ
 if not settings.GROQ_API_KEY:
     settings.GROQ_API_KEY = os.getenv("GROQ_API_KEY", os.getenv("GROK_API_KEY", ""))
+
+if os.getenv("MONGODB_URI"):
+    settings.MONGODB_URI = os.getenv("MONGODB_URI")
+if os.getenv("MONGODB_DATABASE"):
+    settings.MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")

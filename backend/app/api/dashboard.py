@@ -63,3 +63,13 @@ def get_analysis_history(db: Session = Depends(get_db), limit: int = 50):
         )
         for r in records
     ]
+
+@router.delete("/history/{item_id}")
+def delete_analysis_record(item_id: int, db: Session = Depends(get_db)):
+    record = db.query(Analysis).filter(Analysis.id == item_id).first()
+    if not record:
+        # Check if already deleted or not found
+        return {"success": True, "message": f"Record {item_id} removed"}
+    db.delete(record)
+    db.commit()
+    return {"success": True, "message": f"Analysis record {item_id} successfully deleted"}

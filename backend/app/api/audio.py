@@ -4,6 +4,7 @@ from app.database.session import get_db
 from app.schemas.analysis import AnalysisResult
 from app.services.audio_service import analyze_audio_voice_clone
 from app.services.auth_service import get_current_user_optional
+from app.services.mongo_service import sync_analysis_to_mongo
 from app.models.user import User
 
 router = APIRouter(prefix="/analyze", tags=["Voice Clone & Audio Analysis"])
@@ -31,4 +32,17 @@ async def analyze_audio_endpoint(
         raise HTTPException(status_code=400, detail="Audio file exceeds 50MB limit.")
         
     user_id = user.id if user else None
-    return analyze_audio_voice_clone(db=db, filename=filename, file_size_kb=file_size_kb, user_id=user_id)
+    result = analyze_audio_voice_clone(db=db, filename=filename, file_size_kb=file_size_kb, user_id=user_id)
+
+    # Persist to MongoDB
+    await sync_analysis_to_mongo(
+        user_id=str(user_id or "guest_user"),
+        content_type="audio",
+        prediction_label=result.prediction,
+        confidence_score=result.confidence,
+        model_name=result.model_name,
+        explanation=result.explanation,
+        file_reference=filename
+    )
+
+    return result

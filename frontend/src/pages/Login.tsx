@@ -1,18 +1,33 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Mail, Lock } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { api } from '../api/client';
 
 export default function Login({ onLogin }: { onLogin: (name: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
-      const name = email.split('@')[0];
-      onLogin(name.charAt(0).toUpperCase() + name.slice(1));
+    if (!email || !password) return;
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await api.login({ email, password });
+      const displayName = response.user.full_name || response.user.email.split('@')[0];
+      onLogin(displayName.charAt(0).toUpperCase() + displayName.slice(1));
       navigate('/');
+    } catch (err: any) {
+      console.error("Login error:", err);
+      const detail = err?.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : "Invalid email or password. Please verify your credentials.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,6 +52,13 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email address</label>
@@ -95,9 +117,17 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                disabled={loading}
+                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-60 cursor-pointer"
               >
-                Sign in
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <span>Sign in</span>
+                )}
               </button>
             </div>
           </form>

@@ -30,7 +30,17 @@ export default function Signup({ onLogin }: { onLogin: (name: string) => void })
     } catch (err: any) {
       console.error("Registration error:", err);
       const detail = err?.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : "Failed to create account. Please try again.");
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        setError(detail.map((d: any) => d.msg || JSON.stringify(d)).join(', '));
+      } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('Network Error') || !err?.response) {
+        setError("Unable to connect to backend server. If the server was idle (Render free tier), it may take ~50 seconds to wake up. Please try again.");
+      } else if (err?.response?.status >= 500) {
+        setError("Server error while processing registration. Please try again shortly.");
+      } else {
+        setError("Failed to create account. Please verify your information and try again.");
+      }
     } finally {
       setLoading(false);
     }

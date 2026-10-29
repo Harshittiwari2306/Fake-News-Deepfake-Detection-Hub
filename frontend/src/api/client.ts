@@ -3,13 +3,18 @@ import axios from 'axios';
 const getBaseUrl = (): string => {
   let url = (import.meta.env.VITE_API_URL || '').trim();
   if (!url) {
+    // If running in production (e.g. deployed on Vercel or any non-localhost host),
+    // default to the live Render backend URL so requests don't hit localhost/127.0.0.1
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'https://fake-news-deepfake-detection-hub.onrender.com/api/v1';
+    }
     return 'http://127.0.0.1:8000/api/v1';
   }
   // Remove trailing slashes and spaces
   url = url.replace(/\/+$/, '');
   
   // If user passed root url (e.g. https://xxx.onrender.com), append /api/v1 automatically
-  if (!url.endsWith('/api/v1')) {
+  if (!url.endsWith('/api/v1') && !url.endsWith('/api')) {
     url = `${url}/api/v1`;
   }
   return url;
@@ -35,12 +40,13 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export interface UserResponse {
-  id: number;
+  id: number | string;
   email: string;
   full_name?: string;
+  name?: string;
   role: string;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface AuthResponse {

@@ -31,13 +31,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware - Support all origins safely (Render, Vercel, localhost)
+# CORS Middleware - Support Vercel frontend, local development, and preview deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://.*",
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://fake-news-deepfake-detection-hub.vercel.app",
+    ],
+    allow_origin_regex=r"https:\/\/.*\.vercel\.app|https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -54,6 +60,7 @@ from app.api.submissions import router as submissions_router
 
 # Mount routes under /api (Task specification)
 app.include_router(submissions_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 
 # Mount routes under /api/v1 (Existing frontend client compatibility)
 app.include_router(submissions_router, prefix=settings.API_V1_STR)

@@ -25,7 +25,13 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
     } catch (err: any) {
       console.error("Login error:", err);
       const detail = err?.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : "Invalid email or password. Please verify your credentials.");
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('Network Error') || !err?.response) {
+        setError("Unable to connect to backend server. If the server was idle (Render free tier), it may take ~50 seconds to wake up. Please try again.");
+      } else {
+        setError("Invalid email or password. Please verify your credentials.");
+      }
     } finally {
       setLoading(false);
     }
